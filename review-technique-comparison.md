@@ -1,8 +1,6 @@
 # Artifact Review & Refinement Techniques — Comparison, Scoring, and Decision Matrix
 
-Leo Dutra, 2026
-
-**Scope.** Techniques for improving the quality of LLM-produced (or LLM-assisted) artifacts — specifications, architecture documents, code, research answers, business analyses — via review, critique, debate, selection, or verification. Ten techniques are compared. Scores reflect the published literature plus documented failure modes; where a technique has no direct empirical validation, that is scored, not hidden.
+**Scope.** Techniques for improving the quality of LLM-produced (or LLM-assisted) artifacts — specifications, architecture documents, code, research answers, business analyses — via review, critique, debate, selection, or verification. Eleven techniques are compared. Scores reflect the published literature plus documented failure modes; where a technique has no direct empirical validation, that is scored, not hidden.
 
 **How to read this document.** §1 defines each technique in enough detail to implement it. §2 defines the scoring model. §3 contains the scored matrix and rankings under two weighting profiles. §4 is the situational decision matrix. §5 covers composition rules (which techniques stack). §6 lists failure modes per technique. §7 is the recommendation. §8 lists sources.
 
@@ -80,6 +78,13 @@ Leo Dutra, 2026
 **Structural properties:** Dominant _within its domain of applicability_; the limitation is coverage — most of a spec's value judgments are not mechanically checkable. Setup cost varies from trivial (run the code) to large (formalization).
 **Best native fit:** Every checkable slice of every artifact, always, before and instead of opinion-based review of that slice.
 
+### T11 — TDD-Gated Verification Loop (verifier-first mechanical gating)
+
+**Shape:** Invert T10's ordering: write the verifier _before_ the artifact. (1) Author acceptance checks/tests that encode intent; (2) confirm they fail; (3) commit them — the frozen verifier is now tamper-evident; (4) generate or revise the artifact in a loop whose _only_ exit condition is the verifier passing, with modification of the verifier forbidden. In agentic settings this is the exit gate for autonomous execution loops (completion promise = all tests + lint + types green).
+**Mechanism of value:** Three properties T10 as commonly practiced lacks. _Ordering_ — a verifier written first encodes intent; one written after the fact rationalizes whatever got built. _Freezing_ — committing the failing verifier before generation makes tampering visible in the diff, a structural anti-Goodhart mechanism that also mitigates T6's verifier-gaming failure mode. _Mechanical stopping_ — the loop's termination condition is objective, eliminating the stopping-rule problem entirely for the gated slice.
+**Structural properties:** Coverage is bounded by the tests you thought to write in advance; unlike exploratory T10 (fuzzing, property testing) it cannot surface unanticipated issues. And the verifier is itself a judgment artifact — whether these are the _right_ tests is not machine-checkable, making verifier quality the single point of failure. Evidence: strong for TDD generally and consistent across agentic-workflow guidance (write failing tests → commit → implement until green → never modify tests), though agent-specific results remain anecdotal.
+**Best native fit:** Any artifact slice with writable acceptance checks — code above all, but also structured documents with checklistable requirements. The exit gate of choice for autonomous generation loops.
+
 ---
 
 ## 2. Scoring Model
@@ -132,6 +137,7 @@ Ten criteria, scored 0–5 per technique. 0 = capability absent; 3 = adequate; 5
 | T8 Tool-Augmented Critique  | 3      | 3        | 5       | 4       | 4           | 3       | 4       | 3       | 4       | 2       |
 | T9 Role-Pipeline            | 3      | 3        | 2       | 3       | 2           | 2       | 1       | 2       | 2       | 3       |
 | T10 Mechanical Verification | 5      | 5        | 5       | 5       | 5           | 5       | 4       | 2       | 5       | 1       |
+| T11 TDD-Gated Loop          | 4      | 4        | 5       | 5       | 5           | 5       | 4       | 3       | 4       | 2       |
 
 **Scoring notes (the non-obvious calls):**
 
@@ -139,56 +145,60 @@ Ten criteria, scored 0–5 per technique. 0 = capability absent; 3 = adequate; 5
 - T3 evidence = 2, not higher: the _combination_ is unvalidated even though every component is; honesty requires scoring the technique as named.
 - T6 evidence = 5: the test-time-compute / verifier-selection literature is the most rigorous body of results on this list.
 - T7 bias = 1: self-preference is the defining failure of self-critique.
-- T10 generality = 1: dominant where applicable, inapplicable to most judgment content. Its C1–C6 scores of 5 are conditional on being within domain — this is the one technique whose row cannot be read unconditionally.
+- T10 generality = 1: dominant where applicable, inapplicable to most judgment content. Its C1–C6 scores of 5 are conditional on being within domain — this technique's row cannot be read unconditionally.
+- T11 coverage = 4, below T10's 5: a verifier written in advance is bounded by anticipated failure modes, whereas exploratory verification (fuzzing, property tests) surfaces unanticipated ones. T11 evidence = 4: TDD itself is well-studied and the agentic guidance is consistent, but agent-loop results are anecdotal. Like T10, T11's row is conditional on the artifact having a checkable slice.
 
 ### 3.2 Weighted totals and ranking — Profile A (artifact refinement)
 
-| Rank | Technique                       | Weighted score | One-line verdict                                                 |
-| ---- | ------------------------------- | -------------- | ---------------------------------------------------------------- |
-| 1    | **T10 Mechanical Verification** | **4.55**       | Unbeatable on the slice it covers; cannot be your only technique |
-| 2    | **T3 Parallel-Blind Hybrid**    | **3.97**       | Best complete method for document refinement                     |
-| 3    | **T8 Tool-Augmented Critique**  | **3.59**       | The highest-value _modifier_ — bolt onto whatever you run        |
-| 4    | **T4 Multi-Agent Debate**       | **3.33**       | Best conflict-resolver; wrong shape as a main loop               |
-| 5    | **T6 Best-of-N + Verifier**     | **3.16**       | Wins wherever a scorer exists; specs mostly lack one             |
-| 6    | **T1 Sequential Gauntlet**      | **3.15**       | Deep but structurally biased; superseded by T3                   |
-| 7    | **T7 Self-Refine / Reflexion**  | **2.84**       | Free polish pass; never load-bearing                             |
-| 8    | **T5 Mixture-of-Agents**        | **2.69**       | A drafting technique miscast as review                           |
-| 9    | **T2 LLM Council**              | **2.53**       | Great round mechanics, no loop — donate its parts to T3          |
-| 10   | **T9 Role-Pipeline**            | **2.37**       | Cost and error propagation without added independence            |
+| Rank | Technique                       | Weighted score | One-line verdict                                                          |
+| ---- | ------------------------------- | -------------- | ------------------------------------------------------------------------- |
+| 1    | **T10 Mechanical Verification** | **4.55**       | Unbeatable on the slice it covers; cannot be your only technique          |
+| 2    | **T11 TDD-Gated Loop**          | **4.25**       | T10 with intent-encoding order, tamper-evidence, and a free stopping rule |
+| 3    | **T3 Parallel-Blind Hybrid**    | **3.97**       | Best complete method for document refinement                              |
+| 4    | **T8 Tool-Augmented Critique**  | **3.59**       | The highest-value _modifier_ — bolt onto whatever you run                 |
+| 5    | **T4 Multi-Agent Debate**       | **3.33**       | Best conflict-resolver; wrong shape as a main loop                        |
+| 6    | **T6 Best-of-N + Verifier**     | **3.16**       | Wins wherever a scorer exists; specs mostly lack one                      |
+| 7    | **T1 Sequential Gauntlet**      | **3.15**       | Deep but structurally biased; superseded by T3                            |
+| 8    | **T7 Self-Refine / Reflexion**  | **2.84**       | Free polish pass; never load-bearing                                      |
+| 9    | **T5 Mixture-of-Agents**        | **2.69**       | A drafting technique miscast as review                                    |
+| 10   | **T2 LLM Council**              | **2.53**       | Great round mechanics, no loop — donate its parts to T3                   |
+| 11   | **T9 Role-Pipeline**            | **2.37**       | Cost and error propagation without added independence                     |
 
 ### 3.3 Weighted totals and ranking — Profile B (one-shot answer quality)
 
 | Rank    | Technique                   | Weighted score |
 | ------- | --------------------------- | -------------- |
 | 1       | T10 Mechanical Verification | 4.30           |
-| 2 (tie) | T3 Parallel-Blind Hybrid    | 3.60           |
-| 2 (tie) | T8 Tool-Augmented Critique  | 3.60           |
-| 4       | T6 Best-of-N + Verifier     | 3.40           |
-| 5       | T4 Multi-Agent Debate       | 3.30           |
-| 6       | T2 LLM Council              | 3.00           |
-| 7       | T7 Self-Refine / Reflexion  | 2.75           |
-| 8       | T1 Sequential Gauntlet      | 2.70           |
-| 9       | T5 Mixture-of-Agents        | 2.65           |
-| 10      | T9 Role-Pipeline            | 2.20           |
+| 2       | T11 TDD-Gated Loop          | 4.05           |
+| 3 (tie) | T3 Parallel-Blind Hybrid    | 3.60           |
+| 3 (tie) | T8 Tool-Augmented Critique  | 3.60           |
+| 5       | T6 Best-of-N + Verifier     | 3.40           |
+| 6       | T4 Multi-Agent Debate       | 3.30           |
+| 7       | T2 LLM Council              | 3.00           |
+| 8       | T7 Self-Refine / Reflexion  | 2.75           |
+| 9       | T1 Sequential Gauntlet      | 2.70           |
+| 10      | T5 Mixture-of-Agents        | 2.65           |
+| 11      | T9 Role-Pipeline            | 2.20           |
 
-**Sensitivity reading.** The ranking is stable at the top (T10, T3, T8 lead under both profiles) and at the bottom (T9 last under both). The interesting movers are T2 (Council) and T6 (Best-of-N), which climb when iteration stops mattering, and T1 (Gauntlet), which falls for the same reason. Conclusion: the choice between Council-like and Gauntlet-like methods is almost entirely a function of whether the artifact persists across rounds.
+**Sensitivity reading.** The ranking is stable at the top (T10 and T11 lead under both profiles — both conditional on a checkable slice existing — with T3 and T8 as the leading unconditional techniques) and at the bottom (T9 last under both). The interesting movers are T2 (Council) and T6 (Best-of-N), which climb when iteration stops mattering, and T1 (Gauntlet), which falls for the same reason. Conclusion: the choice between Council-like and Gauntlet-like methods is almost entirely a function of whether the artifact persists across rounds.
 
 ---
 
 ## 4. Decision Matrix
 
-| Situation                                          | Primary technique                          | Secondary / modifier                               | Explicitly avoid                                |
-| -------------------------------------------------- | ------------------------------------------ | -------------------------------------------------- | ----------------------------------------------- |
-| Refining a spec, architecture doc, or long report  | T3 Parallel-Blind Hybrid                   | T8 on every checkable claim; T4 on split critiques | T1 alone (anchoring); T2 alone (no revision)    |
-| One-off hard question, best single answer wanted   | T2 Council or T6 Best-of-N                 | T8 if claims are checkable                         | T1 (nothing to iterate on)                      |
-| Code correctness                                   | T10 (tests, property tests, fuzzing)       | T6 with test-pass verifier; review only for design | Opinion-only review of correctness              |
-| Code design / API surface                          | T3                                         | T8 (compile the examples)                          | T7 as sole reviewer                             |
-| Mathematical or formal claims                      | T10 (checker / formalization)              | T4 for proof-strategy disputes                     | Majority voting of model opinions               |
-| Business idea / market claim                       | T10 (presale, customer contact)            | T3 on the written analysis only                    | Any all-LLM loop as validation                  |
-| Two reviewers (or rounds) contradict each other    | T4 with assigned stances                   | Human adjudication of the extracted crux           | Another undirected review lap                   |
-| Producing a first draft from scratch               | T5 MoA (parallel drafts → merge)           | T7 as a free polish pass                           | Starting the review loop on a single cold draft |
-| High-volume grading / evaluation at scale          | T6 with rubric verifier                    | ChatEval-style debate on disagreements only        | T3 (cost)                                       |
-| Multi-stage production workflow (not one artifact) | T9, reluctantly, with per-stage validation | T10 gates between stages                           | Free-running pipelines without checkpoints      |
+| Situation                                          | Primary technique                                  | Secondary / modifier                                | Explicitly avoid                                                     |
+| -------------------------------------------------- | -------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------- |
+| Refining a spec, architecture doc, or long report  | T3 Parallel-Blind Hybrid                           | T8 on every checkable claim; T4 on split critiques  | T1 alone (anchoring); T2 alone (no revision)                         |
+| One-off hard question, best single answer wanted   | T2 Council or T6 Best-of-N                         | T8 if claims are checkable                          | T1 (nothing to iterate on)                                           |
+| Code correctness                                   | T11 (frozen failing tests as the loop's exit gate) | T10 fuzzing/property tests for unanticipated issues | Opinion-only review of correctness; verifiers written after the code |
+| Designing the test suite / acceptance criteria     | T3 gauntlet on the verifier itself                 | T4 for disputed cases                               | Treating passing tests as proof the tests were right                 |
+| Code design / API surface                          | T3                                                 | T8 (compile the examples)                           | T7 as sole reviewer                                                  |
+| Mathematical or formal claims                      | T10 (checker / formalization)                      | T4 for proof-strategy disputes                      | Majority voting of model opinions                                    |
+| Business idea / market claim                       | T10 (presale, customer contact)                    | T3 on the written analysis only                     | Any all-LLM loop as validation                                       |
+| Two reviewers (or rounds) contradict each other    | T4 with assigned stances                           | Human adjudication of the extracted crux            | Another undirected review lap                                        |
+| Producing a first draft from scratch               | T5 MoA (parallel drafts → merge)                   | T7 as a free polish pass                            | Starting the review loop on a single cold draft                      |
+| High-volume grading / evaluation at scale          | T6 with rubric verifier                            | ChatEval-style debate on disagreements only         | T3 (cost)                                                            |
+| Multi-stage production workflow (not one artifact) | T9, reluctantly, with per-stage validation         | T10 gates between stages                            | Free-running pipelines without checkpoints                           |
 
 **Tie-breakers when the matrix is ambiguous:**
 
@@ -208,7 +218,8 @@ These techniques are not mutually exclusive; the strongest workflows stack them.
 2. **T3 + T4 escalation.** Inside the hybrid, any critique where independent reviewers _split_ is escalated to a stance-assigned debate rather than resolved by chairman fiat. Debate output = an explicit crux for the human, not a forced consensus.
 3. **T8 inside anything.** Tool-augmented critique is a modifier, not a competitor: give every reviewer in every technique execution and retrieval tools. It converts a fraction of every review from opinion to fact at near-zero design cost.
 4. **T6 as the inner selector of T3's fix pass.** Generate 3 candidate revisions of a flagged section, select with a rubric verifier. Cheap where sections are short.
-5. **Anti-composition:** T9 wrapped around any of the above adds stages without adding independence — the one stacking direction the failure literature consistently punishes.
+5. **Gauntlet the verifier, TDD-gate the artifact (T3 → T11).** The single highest-leverage composition for checkable artifacts. The test suite is a judgment artifact — whether these are the _right_ tests cannot be machine-checked — so it is the correct target for adversarial review. Once the verifier survives the gauntlet, freeze it (commit failing) and let a mechanical loop satisfy it. Review effort concentrates where opinion is irreplaceable; execution runs where opinion is worthless. This also partially resolves T10/T11's coverage-illusion failure mode: the inventory of what is and isn't checked gets adversarially reviewed instead of assumed.
+6. **Anti-composition:** T9 wrapped around any of the above adds stages without adding independence — the one stacking direction the failure literature consistently punishes.
 
 ---
 
@@ -226,6 +237,7 @@ These techniques are not mutually exclusive; the strongest workflows stack them.
 | T8 Tool Critique   | False confidence spillover — tool-verified slices lend unearned credibility to unverified ones                                           | Mark verified vs. opined claims explicitly in review output                                                      |
 | T9 Role-Pipeline   | Error propagation; cost explosion; debugging opacity                                                                                     | Per-stage validation gates; collapse stages until it hurts                                                       |
 | T10 Mechanical     | Coverage illusion — testing the checkable 30% and calling the artifact verified                                                          | Explicit inventory of what was and was not checked                                                               |
+| T11 TDD-Gated      | Frozen-verifier blind spot — wrong or incomplete tests pass with full confidence; generator tampers with tests to go green               | Gauntlet-review the suite _before_ freezing; commit failing tests first so any tampering appears in the diff     |
 | _All of the above_ | **Shared prior collapse**: all-LLM ensembles converge to training-distribution consensus; cross-family diversity helps less than assumed | Humans with skin in the game; empirical contact; adversarial "takedown" generation targeting framing-level error |
 
 ---
@@ -236,10 +248,11 @@ For document and specification refinement — the primary use case:
 
 1. **Default loop: T3 (Parallel-Blind Hybrid).** 3–4 independent blind reviews per round, triage by independent-flag count, revise, stop when a round yields ≤ 1 new high-severity issue.
 2. **Always-on modifiers: T8 and T10.** Every checkable claim gets checked, not reviewed. Reviewers get tools. Verified and opined findings are labeled separately.
-3. **Escalation path: T4.** Reviewer splits go to stance-assigned debate; the output is a crux presented to the human, never a synthesized compromise.
-4. **Upstream: T5.** For new documents, merge 2–3 independent drafts before the first review round.
-5. **One structural takedown per artifact.** Before the final round, commission a single adversarial "this document is fundamentally wrong" pass — critique-mode reviewers work within the frame; only takedown-mode reliably attacks it.
-6. **Know the ceiling.** All-LLM review converges to model-consensus quality. The two diversity injections that break the ceiling — humans with stakes, and reality — should be scheduled, not hoped for.
+3. **Checkable slices: invert the order with T11.** Where acceptance checks can be written, write them _before_ the artifact, gauntlet the checks themselves (composition rule 5), then freeze them and loop mechanically until green. The gauntlet's opinion budget moves from the implementation to the verifier — the one place it's irreplaceable.
+4. **Escalation path: T4.** Reviewer splits go to stance-assigned debate; the output is a crux presented to the human, never a synthesized compromise.
+5. **Upstream: T5.** For new documents, merge 2–3 independent drafts before the first review round.
+6. **One structural takedown per artifact.** Before the final round, commission a single adversarial "this document is fundamentally wrong" pass — critique-mode reviewers work within the frame; only takedown-mode reliably attacks it.
+7. **Know the ceiling.** All-LLM review converges to model-consensus quality. The two diversity injections that break the ceiling — humans with stakes, and reality — should be scheduled, not hoped for.
 
 Net: no single published technique dominates. The dominant _strategy_ is a composition — mechanical verification wherever possible, parallel-blind review with a stopping rule for everything else, debate for disagreements, and synthesis only at the drafting stage.
 
@@ -261,6 +274,7 @@ Net: no single published technique dominates. The dominant _strategy_ is a compo
 - Wang, X. et al. _Self-Consistency Improves Chain of Thought Reasoning_ (ICLR 2023).
 - Zheng, L. et al. _Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena_ (2023) — verbosity and self-preference biases in model judges.
 - Irving, G., Christiano, P., Amodei, D. _AI Safety via Debate_ (2018) — the original debate proposal.
+- Anthropic, _Claude Code Best Practices_ (2025) — TDD workflow guidance: write failing tests, confirm failure, commit, implement until green without modifying tests.
 - Deliberative multi-agent LLMs improve clinical reasoning in ophthalmology (2026) — independent validation of the Council pipeline in one domain.
 
 _Scores in §3 are this document's synthesis, not values taken from any single paper. Weighted totals are exact under the stated weights; re-derive them if you change a weight._
